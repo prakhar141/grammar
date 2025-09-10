@@ -45,7 +45,6 @@ def predict_word(state_word, Q, all_words):
 # ------------------------
 # T5 Grammar Model
 # ------------------------
-# Folder to store T5 files
 t5_model_dir = "t5_model"
 os.makedirs(t5_model_dir, exist_ok=True)
 
@@ -64,18 +63,26 @@ t5_urls = {
 for name, url in t5_urls.items():
     download_file(url, os.path.join(t5_model_dir, name))
 
-# Load tokenizer and model from the folder
+# Load tokenizer
 tokenizer = T5Tokenizer.from_pretrained(t5_model_dir, use_fast=True)
-t5_model = T5ForConditionalGeneration.from_pretrained(t5_model_dir, use_safetensors=True)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-t5_model.to(device)
+
+# Always load model on CPU to avoid "meta tensor" errors
+t5_model = T5ForConditionalGeneration.from_pretrained(
+    t5_model_dir,
+    use_safetensors=True,
+    device_map="cpu"
+)
 t5_model.eval()
 
+# Inference function
 def correct_sentence(sentence, max_length=128):
     input_text = "grammar: " + sentence
-    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length).to(device)
+    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length)
+
+    # Keep inputs on CPU (safe for Streamlit Cloud)
     with torch.no_grad():
         outputs = t5_model.generate(**inputs, max_length=max_length)
+
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # ------------------------
