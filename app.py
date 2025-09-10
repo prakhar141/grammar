@@ -69,15 +69,11 @@ def remove_duplicate_words(text):
 # ------------------------
 # T5 Grammar Model
 # ------------------------
-t5_repo = "prakhar146/grammar"
-
-tokenizer = T5Tokenizer.from_pretrained(t5_repo, use_fast=True)
-t5_model = T5ForConditionalGeneration.from_pretrained(t5_repo)
-
-# Force CPU to avoid "meta tensor" errors
-device = torch.device("cpu")
-t5_model.to(device)
-t5_model.eval()
+t5_model = T5ForConditionalGeneration.from_pretrained(
+    t5_repo,
+    device_map="cpu",        # forces model to CPU directly
+    torch_dtype=torch.float32 # ensures real tensors
+)
 
 def correct_sentence(sentence, max_length=128):
     input_text = "grammar: " + sentence
