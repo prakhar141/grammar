@@ -102,13 +102,6 @@ def full_correction_pipeline(user_input):
     grammar_corrected = correct_sentence(spelling_cleaned)
     return spelling_cleaned, grammar_corrected
 
-# ------------------------
-# Streamlit UI
-# ------------------------
-st.set_page_config(page_title="📝 Spelling & Grammar Corrector", page_icon="✨", layout="centered")
-
-st.title("📝 Spelling & Grammar Corrector")
-st.markdown("### 🔍 Fix your text instantly with AI-powered spelling ➝ grammar pipeline!")
 
 # ------------------------
 # Streamlit UI
