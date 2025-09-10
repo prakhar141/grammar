@@ -123,6 +123,10 @@ if st.button("✨ Correct My Text"):
 
         st.subheader("📖 Final Grammar Corrected Text")
         st.success(grammar_out)
-
+# Footer
 st.markdown("---")
-st.caption("✨ Built with ❤️ by Prakhar Mathur")
+st.markdown(
+    "<div style='text-align: center;'>✨ Built with ❤️ by Prakhar Mathur ✨</div>",
+    unsafe_allow_html=True
+)
+
