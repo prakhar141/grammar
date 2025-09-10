@@ -69,6 +69,7 @@ def remove_duplicate_words(text):
 # ------------------------
 # T5 Grammar Model
 # ------------------------
+t5_repo = "prakhar146/grammar"  # define this first!
 t5_model = T5ForConditionalGeneration.from_pretrained(
     t5_repo,
     device_map="cpu",        # forces model to CPU directly
