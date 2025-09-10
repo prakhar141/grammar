@@ -66,25 +66,20 @@ for name, url in t5_urls.items():
 # Load tokenizer
 tokenizer = T5Tokenizer.from_pretrained(t5_model_dir, use_fast=True)
 
-# Always load model on CPU to avoid "meta tensor" errors
+# ✅ Load model directly on CPU without device_map/accelerate
 t5_model = T5ForConditionalGeneration.from_pretrained(
     t5_model_dir,
-    use_safetensors=True,
-    device_map="cpu"
+    use_safetensors=True
 )
+t5_model = t5_model.to("cpu")   # safe move to CPU
 t5_model.eval()
 
-# Inference function
 def correct_sentence(sentence, max_length=128):
     input_text = "grammar: " + sentence
-    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length)
-
-    # Keep inputs on CPU (safe for Streamlit Cloud)
+    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length).to("cpu")
     with torch.no_grad():
         outputs = t5_model.generate(**inputs, max_length=max_length)
-
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
-
 # ------------------------
 # Streamlit UI
 # ------------------------
