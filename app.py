@@ -45,9 +45,11 @@ def predict_word(state_word, Q, all_words):
 # ------------------------
 # T5 Grammar Model
 # ------------------------
+# Folder to store T5 files
 t5_model_dir = "t5_model"
 os.makedirs(t5_model_dir, exist_ok=True)
 
+# URLs for each T5 file
 t5_urls = {
     "model.safetensors": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/model.safetensors",
     "tokenizer_config.json": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/tokenizer_config.json",
@@ -58,10 +60,11 @@ t5_urls = {
     "added_tokens.json": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/added_tokens.json"
 }
 
-# Download files
+# Download files into t5_model_dir
 for name, url in t5_urls.items():
     download_file(url, os.path.join(t5_model_dir, name))
 
+# Load tokenizer and model from the folder
 tokenizer = T5Tokenizer.from_pretrained(t5_model_dir, use_fast=True)
 t5_model = T5ForConditionalGeneration.from_pretrained(t5_model_dir, use_safetensors=True)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -78,17 +81,20 @@ def correct_sentence(sentence, max_length=128):
 # ------------------------
 # Streamlit UI
 # ------------------------
-st.title("Real-Time Spelling + Grammar Corrector")
+st.title("Spelling & Grammar Corrector (Hugging Face URLs)")
 
-user_input = st.text_area("Type your sentence here:")
+option = st.radio("Choose model:", ("Q-learning Spelling Corrector", "T5 Grammar Corrector"))
 
-if user_input.strip():
-    # Step 1: Correct spelling word by word
-    words = user_input.split()
-    spelling_corrected = " ".join([predict_word(w, Q, all_words) for w in words])
+user_input = st.text_area("Enter your text:")
 
-    # Step 2: Correct grammar using T5
-    fully_corrected = correct_sentence(spelling_corrected)
-
-    st.subheader("Corrected Sentence:")
-    st.write(fully_corrected)
+if st.button("Correct"):
+    if not user_input.strip():
+        st.warning("Please enter some text!")
+    else:
+        if option == "Q-learning Spelling Corrector":
+            words = user_input.split()
+            corrected = " ".join([predict_word(w, Q, all_words) for w in words])
+        else:
+            corrected = correct_sentence(user_input)
+        st.subheader("Corrected Text")
+        st.write(corrected)
