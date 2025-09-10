@@ -64,7 +64,7 @@ def correct_sentence(sentence, max_length=128):
     return tokenizer.decode(outputs[0], skip_special_tokens=True)# ------------------------
 # Streamlit UI
 # ------------------------
-st.title("Spelling & Grammar Corrector (Hugging Face URLs)")
+st.title("Spelling & Grammar Corrector")
 
 option = st.radio("Choose model:", ("Q-learning Spelling Corrector", "T5 Grammar Corrector"))
 
