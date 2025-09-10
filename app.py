@@ -65,6 +65,9 @@ def correct_sentence(sentence, max_length=128):
 # ------------------------
 # Streamlit UI
 # ------------------------
+# ------------------------
+# Streamlit UI
+# ------------------------
 st.set_page_config(page_title="📝 Spelling & Grammar Corrector", page_icon="✨", layout="centered")
 
 st.title("📝 Spelling & Grammar Corrector")
@@ -101,6 +104,9 @@ if st.button("✨ Correct My Text"):
         st.subheader("📖 Final Corrected Sentence")
         st.success(fully_corrected)
 
+# Footer
+st.markdown("---")
+st.caption("✨ Built with ❤️ by Prakhar Mathur")
 # Footer
 st.markdown("---")
 st.markdown(
