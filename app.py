@@ -44,47 +44,24 @@ def predict_word(state_word, Q, all_words):
 # ------------------------
 # T5 Grammar Model
 # ------------------------
-t5_model_dir = "t5_model"
-os.makedirs(t5_model_dir, exist_ok=True)
+# ⚠️ Replace this with the actual model repo where your T5 model is uploaded
+t5_repo = "prakhar146/grammar"
 
-# URLs for each T5 file
-t5_urls = {
-    "model.safetensors": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/model.safetensors",
-    "tokenizer_config.json": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/tokenizer_config.json",
-    "spiece.model": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/spiece.model",
-    "special_tokens_map.json": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/special_tokens_map.json",
-    "generation_config.json": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/generation_config.json",
-    "config.json": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/config.json",
-    "added_tokens.json": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/added_tokens.json"
-}
+# Load tokenizer and model
+tokenizer = T5Tokenizer.from_pretrained(t5_repo, use_fast=True)
+t5_model = T5ForConditionalGeneration.from_pretrained(t5_repo)
 
-# Download files into t5_model_dir
-for name, url in t5_urls.items():
-    download_file(url, os.path.join(t5_model_dir, name))
-
-# Load tokenizer
-tokenizer = T5Tokenizer.from_pretrained(t5_model_dir, use_fast=True)
-
-# Always load model on CPU to avoid "meta tensor" errors
-t5_model = T5ForConditionalGeneration.from_pretrained(
-    t5_model_dir,
-    use_safetensors=True,
-    device_map="cpu"
-)
+# Always keep on CPU to avoid "meta tensor" errors
+device = torch.device("cpu")
+t5_model.to(device)
 t5_model.eval()
 
-# Inference function
 def correct_sentence(sentence, max_length=128):
     input_text = "grammar: " + sentence
-    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length)
-
-    # Keep inputs on CPU (safe for Streamlit Cloud)
+    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length).to(device)
     with torch.no_grad():
         outputs = t5_model.generate(**inputs, max_length=max_length)
-
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-# ------------------------
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)# ------------------------
 # Streamlit UI
 # ------------------------
 st.title("Spelling & Grammar Corrector (Hugging Face URLs)")
