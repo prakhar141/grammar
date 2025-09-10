@@ -41,7 +41,6 @@ def predict_word(state_word, Q, all_words):
         return max(Q[state], key=Q[state].get)
     candidates = get_close_matches(state_word, all_words, n=1)
     return candidates[0] if candidates else state_word
-
 # ------------------------
 # T5 Grammar Model
 # ------------------------
@@ -66,20 +65,25 @@ for name, url in t5_urls.items():
 # Load tokenizer
 tokenizer = T5Tokenizer.from_pretrained(t5_model_dir, use_fast=True)
 
-# ✅ Load model directly on CPU without device_map/accelerate
+# Always load model on CPU to avoid "meta tensor" errors
 t5_model = T5ForConditionalGeneration.from_pretrained(
     t5_model_dir,
-    use_safetensors=True
+    use_safetensors=True,
+    device_map="cpu"
 )
-t5_model = t5_model.to("cpu")   # safe move to CPU
 t5_model.eval()
 
+# Inference function
 def correct_sentence(sentence, max_length=128):
     input_text = "grammar: " + sentence
-    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length).to("cpu")
+    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length)
+
+    # Keep inputs on CPU (safe for Streamlit Cloud)
     with torch.no_grad():
         outputs = t5_model.generate(**inputs, max_length=max_length)
+
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
+
 # ------------------------
 # Streamlit UI
 # ------------------------
