@@ -45,7 +45,6 @@ def predict_word(state_word, Q, all_words):
 # ------------------------
 # Post-processing helpers
 # ------------------------
-# Common mistakes dictionary
 custom_corrections = {
     "teh": "the",
     "Teh": "The",
@@ -69,12 +68,14 @@ def remove_duplicate_words(text):
 # ------------------------
 # T5 Grammar Model
 # ------------------------
-t5_repo = "prakhar146/grammar"  # define this first!
-t5_model = T5ForConditionalGeneration.from_pretrained(
-    t5_repo,
-    device_map="cpu",        # forces model to CPU directly
-    torch_dtype=torch.float32 # ensures real tensors
-)
+t5_repo = "prakhar146/grammar"
+tokenizer = T5Tokenizer.from_pretrained(t5_repo, use_fast=True)
+t5_model = T5ForConditionalGeneration.from_pretrained(t5_repo)
+
+# Force CPU to avoid "meta tensor" errors
+device = torch.device("cpu")
+t5_model.to(device)
+t5_model.eval()
 
 def correct_sentence(sentence, max_length=128):
     input_text = "grammar: " + sentence
@@ -89,16 +90,13 @@ def correct_sentence(sentence, max_length=128):
 def full_correction_pipeline(user_input):
     # Step 1: Q-learning spelling correction
     words = user_input.split()
-    spelling_corrected = " ".join([
-        apply_custom_corrections(predict_word(w, Q, all_words))
-        for w in words
-    ])
+    spelling_corrected = " ".join([apply_custom_corrections(predict_word(w, Q, all_words)) for w in words])
     spelling_cleaned = remove_duplicate_words(spelling_corrected)
-
+    
     # Step 2: Grammar correction
     grammar_corrected = correct_sentence(spelling_cleaned)
+    
     return spelling_cleaned, grammar_corrected
-
 
 # ------------------------
 # Streamlit UI
@@ -108,13 +106,13 @@ st.set_page_config(page_title="📝 Spelling & Grammar Corrector", page_icon="�
 st.title("📝 Spelling & Grammar Corrector")
 st.markdown("### 🔍 Fix your text instantly with AI-powered spelling & grammar correction!")
 
-# Radio button to choose model
+# Mode selection
 option = st.radio(
     "Choose correction mode:",
     ("🅰️  Spelling Corrector", "🅱️ Grammar Corrector")
 )
 
-# User input with guidance
+# User input
 if option.startswith("🅰️"):
     user_input = st.text_input("✍️ Enter a single word to correct spelling:")
 else:
@@ -126,21 +124,14 @@ if st.button("✨ Correct My Text"):
         st.warning("⚠️ Please enter some text!")
     else:
         if option.startswith("🅰️"):
-            # Q-learning spelling correction
             spelling_out = predict_word(user_input, Q, all_words)
             st.subheader("🔡 Corrected Word")
             st.info(spelling_out)
         else:
-            # T5 grammar correction
             grammar_out = correct_sentence(user_input)
             st.subheader("📖 Final Grammar Corrected Sentence")
             st.success(grammar_out)
 
-
 # Footer
 st.markdown("---")
-st.markdown(
-    "<div style='text-align: center;'>✨ Built with ❤️ by Prakhar Mathur ✨</div>",
-    unsafe_allow_html=True
-)
-
+st.markdown("✨ Built with ❤️ by Prakhar Mathur ✨", unsafe_allow_html=True)
