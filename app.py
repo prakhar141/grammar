@@ -110,19 +110,43 @@ st.set_page_config(page_title="📝 Spelling & Grammar Corrector", page_icon="�
 st.title("📝 Spelling & Grammar Corrector")
 st.markdown("### 🔍 Fix your text instantly with AI-powered spelling ➝ grammar pipeline!")
 
-user_input = st.text_area("✍️ Enter your text here:")
+# ------------------------
+# Streamlit UI
+# ------------------------
+st.set_page_config(page_title="📝 Spelling & Grammar Corrector", page_icon="✨", layout="centered")
 
+st.title("📝 Spelling & Grammar Corrector")
+st.markdown("### 🔍 Fix your text instantly with AI-powered spelling & grammar correction!")
+
+# Radio button to choose model
+option = st.radio(
+    "Choose correction mode:",
+    ("🅰️  Spelling Corrector", "🅱️ Grammar Corrector")
+)
+
+# User input with guidance
+if option.startswith("🅰️"):
+    user_input = st.text_input("✍️ Enter a single word to correct spelling:")
+else:
+    user_input = st.text_area("✍️ Enter a full sentence to correct grammar:")
+
+# Action button
 if st.button("✨ Correct My Text"):
     if not user_input.strip():
-        st.warning("⚠️ Please enter some text to correct!")
+        st.warning("⚠️ Please enter some text!")
     else:
-        spelling_out, grammar_out = full_correction_pipeline(user_input)
+        if option.startswith("🅰️"):
+            # Q-learning spelling correction
+            spelling_out = predict_word(user_input, Q, all_words)
+            st.subheader("🔡 Corrected Word")
+            st.info(spelling_out)
+        else:
+            # T5 grammar correction
+            grammar_out = correct_sentence(user_input)
+            st.subheader("📖 Final Grammar Corrected Sentence")
+            st.success(grammar_out)
 
-        st.subheader("🔡 After Spelling Correction")
-        st.info(spelling_out)
 
-        st.subheader("📖 Final Grammar Corrected Text")
-        st.success(grammar_out)
 # Footer
 st.markdown("---")
 st.markdown(
