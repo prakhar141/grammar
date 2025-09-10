@@ -61,23 +61,36 @@ def correct_sentence(sentence, max_length=128):
     inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length).to(device)
     with torch.no_grad():
         outputs = t5_model.generate(**inputs, max_length=max_length)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)# ------------------------
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+# ------------------------
 # Streamlit UI
 # ------------------------
-st.title("Spelling & Grammar Corrector")
+st.set_page_config(page_title="📝 Spelling & Grammar Corrector", page_icon="✨", layout="centered")
 
-option = st.radio("Choose model:", ("Q-learning Spelling Corrector", "T5 Grammar Corrector"))
+st.title("📝 Spelling & Grammar Corrector")
+st.markdown("### 🔍 Fix your text instantly with AI-powered spelling ➝ grammar pipeline!")
 
-user_input = st.text_area("Enter your text:")
+# User input
+user_input = st.text_area("✍️ Enter your text here:")
 
-if st.button("Correct"):
+# Action button
+if st.button("✨ Correct My Text"):
     if not user_input.strip():
-        st.warning("Please enter some text!")
+        st.warning("⚠️ Please enter some text to correct!")
     else:
-        if option == "Q-learning Spelling Corrector":
-            words = user_input.split()
-            corrected = " ".join([predict_word(w, Q, all_words) for w in words])
-        else:
-            corrected = correct_sentence(user_input)
-        st.subheader("Corrected Text")
-        st.write(corrected)
+        # Step 1: Spelling correction (Q-learning)
+        words = user_input.split()
+        spelling_corrected = " ".join([predict_word(w, Q, all_words) for w in words])
+
+        st.subheader("🔡 After Spelling Correction")
+        st.info(spelling_corrected)
+
+        # Step 2: Grammar correction (T5)
+        fully_corrected = correct_sentence(spelling_corrected)
+
+        st.subheader("📖 Final Grammar Corrected Text")
+        st.success(fully_corrected)
+
+# Footer
+st.markdown("---")
+st.caption("✨ Built with ❤️ by Prakhar Mathur")
