@@ -34,24 +34,47 @@ def word_to_state(word):
     return tuple(sorted(ngrams))
 
 def predict_word(state_word, Q, all_words):
-    if state_word is None or len(state_word) == 0:
+    if not state_word:
         return state_word
     state = word_to_state(state_word)
     if state in Q and Q[state]:
         return max(Q[state], key=Q[state].get)
     candidates = get_close_matches(state_word, all_words, n=1)
     return candidates[0] if candidates else state_word
+
+# ------------------------
+# Post-processing helpers
+# ------------------------
+# Common mistakes dictionary
+custom_corrections = {
+    "teh": "the",
+    "Teh": "The",
+    "recieve": "receive",
+    "adress": "address",
+    "enviroment": "environment",
+    "acommodate": "accommodate"
+}
+
+def apply_custom_corrections(word):
+    return custom_corrections.get(word, word)
+
+def remove_duplicate_words(text):
+    words = text.split()
+    cleaned = []
+    for w in words:
+        if not cleaned or cleaned[-1].lower() != w.lower():
+            cleaned.append(w)
+    return " ".join(cleaned)
+
 # ------------------------
 # T5 Grammar Model
 # ------------------------
-# ⚠️ Replace this with the actual model repo where your T5 model is uploaded
 t5_repo = "prakhar146/grammar"
 
-# Load tokenizer and model
 tokenizer = T5Tokenizer.from_pretrained(t5_repo, use_fast=True)
 t5_model = T5ForConditionalGeneration.from_pretrained(t5_repo)
 
-# Always keep on CPU to avoid "meta tensor" errors
+# Force CPU to avoid "meta tensor" errors
 device = torch.device("cpu")
 t5_model.to(device)
 t5_model.eval()
@@ -62,55 +85,44 @@ def correct_sentence(sentence, max_length=128):
     with torch.no_grad():
         outputs = t5_model.generate(**inputs, max_length=max_length)
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
+
 # ------------------------
-# Streamlit UI
+# Full Correction Pipeline
 # ------------------------
+def full_correction_pipeline(user_input):
+    # Step 1: Q-learning spelling correction
+    words = user_input.split()
+    spelling_corrected = " ".join([
+        apply_custom_corrections(predict_word(w, Q, all_words))
+        for w in words
+    ])
+    spelling_cleaned = remove_duplicate_words(spelling_corrected)
+
+    # Step 2: Grammar correction
+    grammar_corrected = correct_sentence(spelling_cleaned)
+    return spelling_cleaned, grammar_corrected
+
 # ------------------------
 # Streamlit UI
 # ------------------------
 st.set_page_config(page_title="📝 Spelling & Grammar Corrector", page_icon="✨", layout="centered")
 
 st.title("📝 Spelling & Grammar Corrector")
-st.markdown("### 🔍 Enter your text and get the final polished sentence instantly!")
+st.markdown("### 🔍 Fix your text instantly with AI-powered spelling ➝ grammar pipeline!")
 
-# Helper to remove duplicate consecutive words
-def remove_duplicate_words(text):
-    words = text.split()
-    cleaned = []
-    for w in words:
-        if not cleaned or cleaned[-1].lower() != w.lower():
-            cleaned.append(w)
-    return " ".join(cleaned)
-
-# User input
 user_input = st.text_area("✍️ Enter your text here:")
 
-# Action button
 if st.button("✨ Correct My Text"):
     if not user_input.strip():
         st.warning("⚠️ Please enter some text to correct!")
     else:
-        # Step 1: Spelling correction (Q-learning)
-        words = user_input.split()
-        spelling_corrected = " ".join([predict_word(w, Q, all_words) for w in words])
+        spelling_out, grammar_out = full_correction_pipeline(user_input)
 
-        # Step 2: Remove duplicates
-        cleaned_text = remove_duplicate_words(spelling_corrected)
+        st.subheader("🔡 After Spelling Correction")
+        st.info(spelling_out)
 
-        # Step 3: Grammar correction (T5)
-        fully_corrected = correct_sentence(cleaned_text)
+        st.subheader("📖 Final Grammar Corrected Text")
+        st.success(grammar_out)
 
-        # Show only final corrected text
-        st.subheader("📖 Final Corrected Sentence")
-        st.success(fully_corrected)
-
-# Footer
 st.markdown("---")
 st.caption("✨ Built with ❤️ by Prakhar Mathur")
-# Footer
-st.markdown("---")
-st.markdown(
-    "<div style='text-align: center;'>✨ Built with ❤️ by Prakhar Mathur ✨</div>",
-    unsafe_allow_html=True
-)
-
