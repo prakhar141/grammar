@@ -20,7 +20,7 @@ def download_file(url, save_path):
 # ------------------------
 # Q-learning Spelling Corrector
 # ------------------------
-q_learning_url = "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/q_learning_spelling_model.pkl"
+q_learning_url = "https://huggingface.co/prakhar146/grammar/resolve/main/q_learning_spelling_model.pkl"
 q_learning_file = download_file(q_learning_url, "q_learning_spelling_model.pkl")
 
 with open(q_learning_file, "rb") as f:
