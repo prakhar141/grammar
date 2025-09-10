@@ -3,5 +3,4 @@ torch
 transformers
 datasets
 requests
-difflib
 safetensors
