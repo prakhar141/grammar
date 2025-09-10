@@ -68,7 +68,16 @@ def correct_sentence(sentence, max_length=128):
 st.set_page_config(page_title="📝 Spelling & Grammar Corrector", page_icon="✨", layout="centered")
 
 st.title("📝 Spelling & Grammar Corrector")
-st.markdown("### 🔍 Fix your text instantly with AI-powered spelling ➝ grammar pipeline!")
+st.markdown("### 🔍 Enter your text and get the final polished sentence instantly!")
+
+# Helper to remove duplicate consecutive words
+def remove_duplicate_words(text):
+    words = text.split()
+    cleaned = []
+    for w in words:
+        if not cleaned or cleaned[-1].lower() != w.lower():
+            cleaned.append(w)
+    return " ".join(cleaned)
 
 # User input
 user_input = st.text_area("✍️ Enter your text here:")
@@ -82,15 +91,20 @@ if st.button("✨ Correct My Text"):
         words = user_input.split()
         spelling_corrected = " ".join([predict_word(w, Q, all_words) for w in words])
 
-        st.subheader("🔡 After Spelling Correction")
-        st.info(spelling_corrected)
+        # Step 2: Remove duplicates
+        cleaned_text = remove_duplicate_words(spelling_corrected)
 
-        # Step 2: Grammar correction (T5)
-        fully_corrected = correct_sentence(spelling_corrected)
+        # Step 3: Grammar correction (T5)
+        fully_corrected = correct_sentence(cleaned_text)
 
-        st.subheader("📖 Final Grammar Corrected Text")
+        # Show only final corrected text
+        st.subheader("📖 Final Corrected Sentence")
         st.success(fully_corrected)
 
 # Footer
 st.markdown("---")
-st.caption("✨ Built with ❤️ by Prakhar Mathur")
+st.markdown(
+    "<div style='text-align: center;'>✨ Built with ❤️ by Prakhar Mathur ✨</div>",
+    unsafe_allow_html=True
+)
+
