@@ -9,13 +9,13 @@ import os
 # ------------------------
 # Helper to download file if not exists
 # ------------------------
-def download_file(url, filename):
-    if not os.path.exists(filename):
+def download_file(url, save_path):
+    if not os.path.exists(save_path):
         r = requests.get(url, stream=True)
-        with open(filename, "wb") as f:
+        with open(save_path, "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
-    return filename
+    return save_path
 
 # ------------------------
 # Q-learning Spelling Corrector
@@ -45,7 +45,9 @@ def predict_word(state_word, Q, all_words):
 # ------------------------
 # T5 Grammar Model
 # ------------------------
-# URLs for each file
+t5_model_dir = "t5_model"
+os.makedirs(t5_model_dir, exist_ok=True)
+
 t5_urls = {
     "model.safetensors": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/model.safetensors",
     "tokenizer_config.json": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/tokenizer_config.json",
@@ -56,13 +58,12 @@ t5_urls = {
     "added_tokens.json": "https://huggingface.co/datasets/prakhar146/grammar/resolve/main/added_tokens.json"
 }
 
-# Download all files
+# Download files
 for name, url in t5_urls.items():
-    download_file(url, name)
+    download_file(url, os.path.join(t5_model_dir, name))
 
-# Load tokenizer and model
-tokenizer = T5Tokenizer.from_pretrained(".", use_fast=True)
-t5_model = T5ForConditionalGeneration.from_pretrained("model.safetensors", use_safetensors=True)
+tokenizer = T5Tokenizer.from_pretrained(t5_model_dir, use_fast=True)
+t5_model = T5ForConditionalGeneration.from_pretrained(t5_model_dir, use_safetensors=True)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 t5_model.to(device)
 t5_model.eval()
@@ -77,20 +78,17 @@ def correct_sentence(sentence, max_length=128):
 # ------------------------
 # Streamlit UI
 # ------------------------
-st.title("Spelling & Grammar Corrector (Hugging Face URLs)")
+st.title("Real-Time Spelling + Grammar Corrector")
 
-option = st.radio("Choose model:", ("Q-learning Spelling Corrector", "T5 Grammar Corrector"))
+user_input = st.text_area("Type your sentence here:")
 
-user_input = st.text_area("Enter your text:")
+if user_input.strip():
+    # Step 1: Correct spelling word by word
+    words = user_input.split()
+    spelling_corrected = " ".join([predict_word(w, Q, all_words) for w in words])
 
-if st.button("Correct"):
-    if not user_input.strip():
-        st.warning("Please enter some text!")
-    else:
-        if option == "Q-learning Spelling Corrector":
-            words = user_input.split()
-            corrected = " ".join([predict_word(w, Q, all_words) for w in words])
-        else:
-            corrected = correct_sentence(user_input)
-        st.subheader("Corrected Text")
-        st.write(corrected)
+    # Step 2: Correct grammar using T5
+    fully_corrected = correct_sentence(spelling_corrected)
+
+    st.subheader("Corrected Sentence:")
+    st.write(fully_corrected)
