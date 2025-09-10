@@ -4,3 +4,4 @@ transformers
 datasets
 requests
 safetensors
+sentencepiece
