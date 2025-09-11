@@ -26,7 +26,7 @@ q_learning_file = download_file(q_learning_url, "q_table.pkl")
 with open(q_learning_file, "rb") as f:
     model_data = pickle.load(f)
 
-Q = model_data['Q_table']
+Q = model_data['q_table']
 all_words = model_data['all_words']
 
 def word_to_state(word):
