@@ -26,14 +26,35 @@ q_learning_file = download_file(q_learning_url, "q_table.pkl")
 with open(q_learning_file, "rb") as f:
     model_data = pickle.load(f)
 
-Q = model_data['q_table']
-all_words = model_data['all_words']
+# Try multiple options to extract Q and all_words
+if isinstance(model_data, dict):
+    if "q_table" in model_data:
+        Q = model_data["q_table"]
+        all_words = model_data.get("all_words", [])
+    elif "Q_table" in model_data:
+        Q = model_data["Q_table"]
+        all_words = model_data.get("all_words", [])
+    elif "Q" in model_data:
+        Q = model_data["Q"]
+        all_words = model_data.get("all_words", [])
+    else:
+        # maybe dict itself *is* the Q table
+        Q = model_data
+        all_words = sorted({a for actions in Q.values() for a in actions.keys()})
+else:
+    # If pickle is directly the Q-table (not dict wrapper)
+    Q = model_data
+    all_words = sorted({a for actions in Q.values() for a in actions.keys()})
 
-def word_to_state(word):
+def word_to_state(word: str):
+    """Convert word into a state representation (sorted 2-grams)."""
+    if not word:
+        return ()
     ngrams = [word[i:i+2] for i in range(len(word)-1)]
     return tuple(sorted(ngrams))
 
 def predict_word(state_word, Q, all_words):
+    """Predict the corrected word using Q-table or fallback to close matches."""
     if not state_word:
         return state_word
     state = word_to_state(state_word)
@@ -41,7 +62,6 @@ def predict_word(state_word, Q, all_words):
         return max(Q[state], key=Q[state].get)
     candidates = get_close_matches(state_word, all_words, n=1)
     return candidates[0] if candidates else state_word
-
 # ------------------------
 # Post-processing helpers
 # ------------------------
