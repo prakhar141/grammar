@@ -53,32 +53,18 @@ def word_to_state(word: str):
     ngrams = [word[i:i+2] for i in range(len(word)-1)]
     return tuple(sorted(ngrams))
 
-from difflib import get_close_matches
-
-from difflib import get_close_matches
-
 def predict_word(state_word, Q, all_words, min_similarity: float = 0.8) -> str:
-    """
-    Predict corrected word using Q-table or fallback.
-    - First tries Q-table (learned corrections).
-    - Then tries difflib if a close enough match exists.
-    - Otherwise returns the original word unchanged.
-    """
+    """Predict corrected word using Q-table or fallback."""
     if not state_word:
-        return state_word  # handle empty input safely
+        return state_word
 
-    # Step 1: Q-learning lookup
     state = word_to_state(state_word)
     if state in Q and Q[state]:
         return max(Q[state], key=Q[state].get)
 
-    # Step 2: Fallback with similarity cutoff
     candidates = get_close_matches(state_word, all_words, n=1, cutoff=min_similarity)
-    if candidates:
-        return candidates[0]
+    return candidates[0] if candidates else state_word
 
-    # Step 3: No confident correction found → leave unchanged
-    return state_word
 # ------------------------
 # Post-processing helpers
 # ------------------------
@@ -109,7 +95,6 @@ t5_repo = "prakhar146/grammar"
 tokenizer = T5Tokenizer.from_pretrained(t5_repo, use_fast=True)
 t5_model = T5ForConditionalGeneration.from_pretrained(t5_repo)
 
-# Force CPU to avoid "meta tensor" errors
 device = torch.device("cpu")
 t5_model.to(device)
 t5_model.eval()
@@ -122,13 +107,18 @@ def correct_sentence(sentence, max_length=128):
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # ------------------------
-# Full Spelling Correction Pipeline
+# Full Correction Pipeline (Spelling → Grammar)
 # ------------------------
-def spelling_correction_pipeline(sentence):
+def full_correction_pipeline(sentence):
+    # Step 1: Spelling correction
     words = sentence.split()
-    corrected_words = [apply_custom_corrections(predict_word(w, Q, all_words)) for w in words]
-    corrected_sentence = " ".join(corrected_words)
-    return remove_duplicate_words(corrected_sentence)
+    spelling_corrected = " ".join([apply_custom_corrections(predict_word(w, Q, all_words)) for w in words])
+    spelling_cleaned = remove_duplicate_words(spelling_corrected)
+
+    # Step 2: Grammar correction
+    grammar_corrected = correct_sentence(spelling_cleaned)
+
+    return grammar_corrected
 
 # ------------------------
 # Streamlit UI
@@ -136,33 +126,19 @@ def spelling_correction_pipeline(sentence):
 st.set_page_config(page_title="📝 Spelling & Grammar Corrector", page_icon="✨", layout="centered")
 
 st.title("📝 Spelling & Grammar Corrector")
-st.markdown("### 🔍 Fix your text instantly with AI-powered spelling & grammar correction!")
-
-# Mode selection
-option = st.radio(
-    "Choose correction mode:",
-    ("🅰️  Spelling Corrector", "🅱️ Grammar Corrector")
-)
+st.markdown("### 🔍 Fix your text instantly with AI-powered spelling + grammar correction!")
 
 # User input
-if option.startswith("🅰️"):
-    user_input = st.text_area("✍️ Enter a sentence to correct spelling:")
-else:
-    user_input = st.text_area("✍️ Enter a full sentence to correct grammar:")
+user_input = st.text_area("✍️ Enter a sentence to correct spelling & grammar:")
 
 # Action button
 if st.button("✨ Correct My Text"):
     if not user_input.strip():
         st.warning("⚠️ Please enter some text!")
     else:
-        if option.startswith("🅰️"):
-            spelling_out = spelling_correction_pipeline(user_input)
-            st.subheader("🔡 Spelling Corrected Sentence")
-            st.info(spelling_out)
-        else:
-            grammar_out = correct_sentence(user_input)
-            st.subheader("📖 Final Grammar Corrected Sentence")
-            st.success(grammar_out)
+        final_out = full_correction_pipeline(user_input)
+        st.subheader("📖 Final Corrected Sentence")
+        st.success(final_out)
 
 # Footer
 st.markdown("---")
