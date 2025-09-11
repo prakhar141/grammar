@@ -53,15 +53,28 @@ def word_to_state(word: str):
     ngrams = [word[i:i+2] for i in range(len(word)-1)]
     return tuple(sorted(ngrams))
 
-def predict_word(state_word, Q, all_words):
-    """Predict the corrected word using Q-table or fallback to close matches."""
+from difflib import get_close_matches
+
+def predict_word(state_word, Q, all_words, min_similarity=0.7):
+    """
+    Predict corrected word using Q-table or fallback.
+    If no good correction is found, return the word unchanged.
+    """
     if not state_word:
         return state_word
+
+    # Step 1: Q-table lookup
     state = word_to_state(state_word)
     if state in Q and Q[state]:
         return max(Q[state], key=Q[state].get)
-    candidates = get_close_matches(state_word, all_words, n=1)
-    return candidates[0] if candidates else state_word
+
+    # Step 2: Fallback to difflib (only if close enough)
+    candidates = get_close_matches(state_word, all_words, n=1, cutoff=min_similarity)
+    if candidates:
+        return candidates[0]
+
+    # Step 3: No correction found → leave word unchanged
+    return state_word
 # ------------------------
 # Post-processing helpers
 # ------------------------
