@@ -55,25 +55,29 @@ def word_to_state(word: str):
 
 from difflib import get_close_matches
 
-def predict_word(state_word, Q, all_words, min_similarity=0.7):
+from difflib import get_close_matches
+
+def predict_word(state_word, Q, all_words, min_similarity: float = 0.8) -> str:
     """
     Predict corrected word using Q-table or fallback.
-    If no good correction is found, return the word unchanged.
+    - First tries Q-table (learned corrections).
+    - Then tries difflib if a close enough match exists.
+    - Otherwise returns the original word unchanged.
     """
     if not state_word:
-        return state_word
+        return state_word  # handle empty input safely
 
-    # Step 1: Q-table lookup
+    # Step 1: Q-learning lookup
     state = word_to_state(state_word)
     if state in Q and Q[state]:
         return max(Q[state], key=Q[state].get)
 
-    # Step 2: Fallback to difflib (only if close enough)
+    # Step 2: Fallback with similarity cutoff
     candidates = get_close_matches(state_word, all_words, n=1, cutoff=min_similarity)
     if candidates:
         return candidates[0]
 
-    # Step 3: No correction found → leave word unchanged
+    # Step 3: No confident correction found → leave unchanged
     return state_word
 # ------------------------
 # Post-processing helpers
