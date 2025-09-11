@@ -85,18 +85,13 @@ def correct_sentence(sentence, max_length=128):
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # ------------------------
-# Full Correction Pipeline
+# Full Spelling Correction Pipeline
 # ------------------------
-def full_correction_pipeline(user_input):
-    # Step 1: Q-learning spelling correction
-    words = user_input.split()
-    spelling_corrected = " ".join([apply_custom_corrections(predict_word(w, Q, all_words)) for w in words])
-    spelling_cleaned = remove_duplicate_words(spelling_corrected)
-    
-    # Step 2: Grammar correction
-    grammar_corrected = correct_sentence(spelling_cleaned)
-    
-    return spelling_cleaned, grammar_corrected
+def spelling_correction_pipeline(sentence):
+    words = sentence.split()
+    corrected_words = [apply_custom_corrections(predict_word(w, Q, all_words)) for w in words]
+    corrected_sentence = " ".join(corrected_words)
+    return remove_duplicate_words(corrected_sentence)
 
 # ------------------------
 # Streamlit UI
@@ -114,7 +109,7 @@ option = st.radio(
 
 # User input
 if option.startswith("🅰️"):
-    user_input = st.text_input("✍️ Enter a single word to correct spelling:")
+    user_input = st.text_area("✍️ Enter a sentence to correct spelling:")
 else:
     user_input = st.text_area("✍️ Enter a full sentence to correct grammar:")
 
@@ -124,8 +119,8 @@ if st.button("✨ Correct My Text"):
         st.warning("⚠️ Please enter some text!")
     else:
         if option.startswith("🅰️"):
-            spelling_out = predict_word(user_input, Q, all_words)
-            st.subheader("🔡 Corrected Word")
+            spelling_out = spelling_correction_pipeline(user_input)
+            st.subheader("🔡 Spelling Corrected Sentence")
             st.info(spelling_out)
         else:
             grammar_out = correct_sentence(user_input)
