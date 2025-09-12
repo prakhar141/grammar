@@ -26,7 +26,6 @@ q_learning_file = download_file(q_learning_url, "q_table.pkl")
 with open(q_learning_file, "rb") as f:
     model_data = pickle.load(f)
 
-# Try multiple options to extract Q and all_words
 if isinstance(model_data, dict):
     if "q_table" in model_data:
         Q = model_data["q_table"]
@@ -38,23 +37,19 @@ if isinstance(model_data, dict):
         Q = model_data["Q"]
         all_words = model_data.get("all_words", [])
     else:
-        # maybe dict itself *is* the Q table
         Q = model_data
         all_words = sorted({a for actions in Q.values() for a in actions.keys()})
 else:
-    # If pickle is directly the Q-table (not dict wrapper)
     Q = model_data
     all_words = sorted({a for actions in Q.values() for a in actions.keys()})
 
 def word_to_state(word: str):
-    """Convert word into a state representation (sorted 2-grams)."""
     if not word:
         return ()
     ngrams = [word[i:i+2] for i in range(len(word)-1)]
     return tuple(sorted(ngrams))
 
 def predict_word(state_word, Q, all_words, min_similarity: float = 0.8) -> str:
-    """Predict corrected word using Q-table or fallback."""
     if not state_word:
         return state_word
 
@@ -106,40 +101,58 @@ def correct_sentence(sentence, max_length=128):
         outputs = t5_model.generate(**inputs, max_length=max_length)
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
+def rewrite_with_tone(sentence, tone_prompt, max_length=128):
+    input_text = f"rewrite with tone ({tone_prompt}): {sentence}"
+    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length).to(device)
+    with torch.no_grad():
+        outputs = t5_model.generate(**inputs, max_length=max_length, num_beams=4)
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+
 # ------------------------
-# Full Correction Pipeline (Spelling → Grammar)
+# Full Correction Pipeline
 # ------------------------
 def full_correction_pipeline(sentence):
-    # Step 1: Spelling correction
     words = sentence.split()
     spelling_corrected = " ".join([apply_custom_corrections(predict_word(w, Q, all_words)) for w in words])
     spelling_cleaned = remove_duplicate_words(spelling_corrected)
-
-    # Step 2: Grammar correction
     grammar_corrected = correct_sentence(spelling_cleaned)
-
     return grammar_corrected
 
 # ------------------------
 # Streamlit UI
 # ------------------------
-st.set_page_config(page_title="📝 Spelling & Grammar Corrector", page_icon="✨", layout="centered")
+st.set_page_config(page_title="✨ Grammarly Replica", page_icon="📝", layout="centered")
 
-st.title("📝 Spelling & Grammar Corrector")
-st.markdown("### 🔍 Fix your text instantly with AI-powered spelling + grammar correction!")
+st.title("📝 Grammarly Replica")
+st.markdown("### ✨ Correct your spelling, grammar, and rewrite with any tone you want!")
 
 # User input
-user_input = st.text_area("✍️ Enter a sentence to correct spelling & grammar:")
+user_input = st.text_area("✍️ Paste your text here:", height=150)
 
-# Action button
-if st.button("✨ Correct My Text"):
-    if not user_input.strip():
-        st.warning("⚠️ Please enter some text!")
-    else:
-        final_out = full_correction_pipeline(user_input)
-        st.subheader("📖 Final Corrected Sentence")
-        st.success(final_out)
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("✅ Correct My Text"):
+        if not user_input.strip():
+            st.warning("⚠️ Please enter some text!")
+        else:
+            final_out = full_correction_pipeline(user_input)
+            st.subheader("📖 Corrected Text")
+            st.success(final_out)
+
+with col2:
+    tone_prompt = st.text_input("🎭 Desired Tone (e.g. formal, polite, funny, motivational):")
+    if st.button("🎨 Rewrite with Tone"):
+        if not user_input.strip():
+            st.warning("⚠️ Please enter some text!")
+        elif not tone_prompt.strip():
+            st.warning("⚠️ Please specify a tone!")
+        else:
+            base_corrected = full_correction_pipeline(user_input)
+            rewritten = rewrite_with_tone(base_corrected, tone_prompt)
+            st.subheader("🎭 Tone-Rewritten Text")
+            st.success(rewritten)
 
 # Footer
 st.markdown("---")
-st.markdown("✨ Built with ❤️ by Prakhar Mathur ✨", unsafe_allow_html=True)
+st.markdown("<center>✨ Built with ❤️ by Prakhar Mathur ✨</center>", unsafe_allow_html=True)
