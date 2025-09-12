@@ -1,5 +1,5 @@
 import streamlit as st
-import pickle
+import json
 from difflib import get_close_matches
 import torch
 from transformers import T5ForConditionalGeneration, T5Tokenizer
@@ -20,53 +20,28 @@ def download_file(url, save_path):
 # ------------------------
 # Q-learning Spelling Corrector
 # ------------------------
-q_learning_url = "https://huggingface.co/prakhar146/grammar/resolve/main/q_table.pkl"
-q_learning_file = download_file(q_learning_url, "q_table.pkl")
+q_learning_url = "https://huggingface.co/prakhar146/grammar/resolve/main/q_table.json"
+q_learning_file = download_file(q_learning_url, "q_table.json")
 
-import pickle, torch, joblib
+with open(q_learning_file, "r") as f:
+    model_data = json.load(f)
 
-def load_q_table(path):
-    with open(path, "rb") as f:
-        # Try PyTorch first
-        try:
-            return torch.load(f, map_location="cpu")
-        except Exception:
-            pass
-        
-        f.seek(0)
-        # Try joblib
-        try:
-            return joblib.load(f)
-        except Exception:
-            pass
-        
-        f.seek(0)
-        # Try plain pickle
-        try:
-            return pickle.load(f)
-        except Exception as e:
-            raise RuntimeError(f"Failed to load Q-table: {e}")
-
-# usage
-model_data = load_q_table(q_learning_file)
-
+# Extract Q-table
 if isinstance(model_data, dict):
     if "q_table" in model_data:
         Q = model_data["q_table"]
         all_words = model_data.get("all_words", [])
-    elif "Q_table" in model_data:
-        Q = model_data["Q_table"]
-        all_words = model_data.get("all_words", [])
-    elif "Q" in model_data:
-        Q = model_data["Q"]
-        all_words = model_data.get("all_words", [])
     else:
         Q = model_data
+        # gather all possible actions
         all_words = sorted({a for actions in Q.values() for a in actions.keys()})
 else:
     Q = model_data
     all_words = sorted({a for actions in Q.values() for a in actions.keys()})
 
+# ------------------------
+# Helpers
+# ------------------------
 def word_to_state(word: str):
     if not word:
         return ()
@@ -82,9 +57,6 @@ def predict_word(state_word, Q, all_words, min_similarity: float = 0.8) -> str:
     candidates = get_close_matches(state_word, all_words, n=1, cutoff=min_similarity)
     return candidates[0] if candidates else state_word
 
-# ------------------------
-# Post-processing helpers
-# ------------------------
 custom_corrections = {
     "teh": "the",
     "Teh": "The",
@@ -140,14 +112,11 @@ st.set_page_config(page_title="✨ Grammar & Spelling Corrector", page_icon="�
 st.title("📝 Grammar & Spelling Corrector")
 st.markdown("### ✨ Correct spelling and grammar instantly!")
 
-# Session state
 if "corrected_text" not in st.session_state:
     st.session_state.corrected_text = ""
 
-# User input
 user_input = st.text_area("✍️ Paste your text here:", height=150)
 
-# Correct Text button
 if st.button("✅ Correct My Text"):
     if not user_input.strip():
         st.warning("⚠️ Please enter some text!")
@@ -157,6 +126,5 @@ if st.button("✅ Correct My Text"):
         st.subheader("📖 Corrected Text")
         st.success(st.session_state.corrected_text)
 
-# Footer
 st.markdown("---")
 st.markdown("<center>✨ Built with ❤️ by Prakhar Mathur ✨</center>", unsafe_allow_html=True)
