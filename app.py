@@ -101,12 +101,16 @@ def correct_sentence(sentence, max_length=128):
         outputs = t5_model.generate(**inputs, max_length=max_length)
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-def rewrite_with_tone(sentence, tone_prompt, max_length=128):
-    input_text = f"rewrite with tone ({tone_prompt}): {sentence}"
-    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length).to(device)
+tone_model_name = "google/flan-t5-large"
+tone_tokenizer = T5Tokenizer.from_pretrained(tone_model_name)
+tone_model = T5ForConditionalGeneration.from_pretrained(tone_model_name)
+
+def rewrite_with_tone(sentence, tone_prompt, max_length=256):
+    input_text = f"Rewrite the following text in a {tone_prompt} tone: {sentence}"
+    inputs = tone_tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length).to(device)
     with torch.no_grad():
-        outputs = t5_model.generate(**inputs, max_length=max_length, num_beams=4)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+        outputs = tone_model.generate(**inputs, max_length=max_length, num_beams=4)
+    return tone_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # ------------------------
 # Full Correction Pipeline
