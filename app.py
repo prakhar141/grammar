@@ -23,8 +23,14 @@ def download_file(url, save_path):
 q_learning_url = "https://huggingface.co/prakhar146/grammar/resolve/main/q_table.pkl"
 q_learning_file = download_file(q_learning_url, "q_table.pkl")
 
+import torch, pickle
+
 with open(q_learning_file, "rb") as f:
-    model_data = pickle.load(f)
+    try:
+        model_data = torch.load(f, map_location="cpu")
+    except Exception:
+        f.seek(0)
+        model_data = pickle.load(f)
 
 if isinstance(model_data, dict):
     if "q_table" in model_data:
