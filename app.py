@@ -102,7 +102,7 @@ def correct_sentence(sentence, max_length=128):
 # ------------------------
 # Tone Rewrite Model using flan-t5-xl
 # ------------------------
-tone_model_name = "google/flan-t5-xl"
+tone_model_name = "google/flan-t5-large"
 tone_tokenizer = T5Tokenizer.from_pretrained(tone_model_name)
 tone_model = T5ForConditionalGeneration.from_pretrained(tone_model_name)
 tone_model.to(device)
