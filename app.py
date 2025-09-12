@@ -110,7 +110,14 @@ tone_model.eval()
 
 def rewrite_with_tone(sentence, tone_prompt, max_length=256):
     # Strong explicit instruction for tone
-    input_text = f"Please rewrite the following sentence so that spelling is correct, grammar is perfect, and tone is {tone_prompt}: {sentence}"
+    input_text = f"Please rewrite the following sentence or paragraph so that:
+1. Spelling is correct.
+2. Grammar is perfect.
+3. The style and tone matches this instruction: {tone_prompt}.
+Make the output clear, professional, and fully adjusted to the requested tone.
+
+Original text: {sentence}
+"
     inputs = tone_tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length).to(device)
     with torch.no_grad():
         outputs = tone_model.generate(**inputs, max_length=max_length, num_beams=5, no_repeat_ngram_size=2)
