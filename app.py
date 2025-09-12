@@ -121,9 +121,9 @@ def full_correction_pipeline(sentence):
 # ------------------------
 # Streamlit UI
 # ------------------------
-st.set_page_config(page_title="✨ Grammarly Replica", page_icon="📝", layout="centered")
+st.set_page_config(page_title="✨ Grammarly", page_icon="📝", layout="centered")
 
-st.title("📝 Grammarly Replica")
+st.title("📝 Grammarly")
 st.markdown("### ✨ Correct your spelling, grammar, and rewrite with any tone you want!")
 
 # User input
