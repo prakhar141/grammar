@@ -52,11 +52,9 @@ def word_to_state(word: str):
 def predict_word(state_word, Q, all_words, min_similarity: float = 0.8) -> str:
     if not state_word:
         return state_word
-
     state = word_to_state(state_word)
     if state in Q and Q[state]:
         return max(Q[state], key=Q[state].get)
-
     candidates = get_close_matches(state_word, all_words, n=1, cutoff=min_similarity)
     return candidates[0] if candidates else state_word
 
@@ -101,15 +99,21 @@ def correct_sentence(sentence, max_length=128):
         outputs = t5_model.generate(**inputs, max_length=max_length)
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-tone_model_name = "google/flan-t5-large"
+# ------------------------
+# Tone Rewrite Model using flan-t5-xl
+# ------------------------
+tone_model_name = "google/flan-t5-xl"
 tone_tokenizer = T5Tokenizer.from_pretrained(tone_model_name)
 tone_model = T5ForConditionalGeneration.from_pretrained(tone_model_name)
+tone_model.to(device)
+tone_model.eval()
 
 def rewrite_with_tone(sentence, tone_prompt, max_length=256):
-    input_text = f"Rewrite the following text in a {tone_prompt} tone: {sentence}"
+    # Strong explicit instruction for tone
+    input_text = f"Please rewrite the following sentence so that spelling is correct, grammar is perfect, and tone is {tone_prompt}: {sentence}"
     inputs = tone_tokenizer(input_text, return_tensors="pt", truncation=True, max_length=max_length).to(device)
     with torch.no_grad():
-        outputs = tone_model.generate(**inputs, max_length=max_length, num_beams=4)
+        outputs = tone_model.generate(**inputs, max_length=max_length, num_beams=5, no_repeat_ngram_size=2)
     return tone_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # ------------------------
@@ -125,37 +129,47 @@ def full_correction_pipeline(sentence):
 # ------------------------
 # Streamlit UI
 # ------------------------
-st.set_page_config(page_title="✨ Grammarly", page_icon="📝", layout="centered")
+st.set_page_config(page_title="✨ Grammarly XL", page_icon="📝", layout="centered")
+st.title("📝 Grammarly XL")
+st.markdown("### ✨ Correct spelling, grammar, and rewrite with any tone you want!")
 
-st.title("📝 Grammarly")
-st.markdown("### ✨ Correct your spelling, grammar, and rewrite with any tone you want!")
+# Session state
+if "corrected_text" not in st.session_state:
+    st.session_state.corrected_text = ""
+if "rewritten_text" not in st.session_state:
+    st.session_state.rewritten_text = ""
 
 # User input
 user_input = st.text_area("✍️ Paste your text here:", height=150)
 
+# Columns for buttons
 col1, col2 = st.columns(2)
 
+# Correct Text button
 with col1:
     if st.button("✅ Correct My Text"):
         if not user_input.strip():
             st.warning("⚠️ Please enter some text!")
         else:
-            final_out = full_correction_pipeline(user_input)
+            with st.spinner("🪄 Correcting text... Please wait ✨"):
+                st.session_state.corrected_text = full_correction_pipeline(user_input)
             st.subheader("📖 Corrected Text")
-            st.success(final_out)
+            st.success(st.session_state.corrected_text)
 
+# Rewrite with Tone button
 with col2:
-    tone_prompt = st.text_input("🎭 Desired Tone (e.g. formal, polite, funny, motivational):")
+    tone_prompt = st.text_input("🎭 Desired Tone (e.g., formal, polite, funny, motivational):")
     if st.button("🎨 Rewrite with Tone"):
         if not user_input.strip():
             st.warning("⚠️ Please enter some text!")
         elif not tone_prompt.strip():
             st.warning("⚠️ Please specify a tone!")
         else:
-            base_corrected = full_correction_pipeline(user_input)
-            rewritten = rewrite_with_tone(base_corrected, tone_prompt)
+            with st.spinner("✨ Rewriting text with your desired tone... 🎯"):
+                base_text = st.session_state.corrected_text if st.session_state.corrected_text else full_correction_pipeline(user_input)
+                st.session_state.rewritten_text = rewrite_with_tone(base_text, tone_prompt)
             st.subheader("🎭 Tone-Rewritten Text")
-            st.success(rewritten)
+            st.success(st.session_state.rewritten_text)
 
 # Footer
 st.markdown("---")
