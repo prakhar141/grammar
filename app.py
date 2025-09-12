@@ -23,14 +23,32 @@ def download_file(url, save_path):
 q_learning_url = "https://huggingface.co/prakhar146/grammar/resolve/main/q_table.pkl"
 q_learning_file = download_file(q_learning_url, "q_table.pkl")
 
-import torch, pickle
+import pickle, torch, joblib
 
-with open(q_learning_file, "rb") as f:
-    try:
-        model_data = torch.load(f, map_location="cpu")
-    except Exception:
+def load_q_table(path):
+    with open(path, "rb") as f:
+        # Try PyTorch first
+        try:
+            return torch.load(f, map_location="cpu")
+        except Exception:
+            pass
+        
         f.seek(0)
-        model_data = pickle.load(f)
+        # Try joblib
+        try:
+            return joblib.load(f)
+        except Exception:
+            pass
+        
+        f.seek(0)
+        # Try plain pickle
+        try:
+            return pickle.load(f)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load Q-table: {e}")
+
+# usage
+model_data = load_q_table(q_learning_file)
 
 if isinstance(model_data, dict):
     if "q_table" in model_data:
