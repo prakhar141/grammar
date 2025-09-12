@@ -80,9 +80,24 @@ def remove_duplicate_words(text):
 # ------------------------
 # T5 Grammar Model
 # ------------------------
+# ------------------------
+# T5 Grammar Model
+# ------------------------
 t5_repo = "prakhar146/grammar"
-tokenizer = T5Tokenizer.from_pretrained(t5_repo, use_fast=True)
-t5_model = T5ForConditionalGeneration.from_pretrained(t5_repo)
+cache_dir = "./.hf_cache"
+
+tokenizer = T5Tokenizer.from_pretrained(
+    t5_repo,
+    use_fast=True,
+    cache_dir=cache_dir
+)
+
+t5_model = T5ForConditionalGeneration.from_pretrained(
+    t5_repo,
+    cache_dir=cache_dir,
+    low_cpu_mem_usage=False,
+    device_map=None
+)
 
 device = torch.device("cpu")
 t5_model.to(device)
