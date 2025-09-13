@@ -2,7 +2,7 @@ import streamlit as st
 import json
 from difflib import get_close_matches
 import torch
-from transformers import T5ForConditionalGeneration, T5Tokenizer, AutoConfig, AutoTokenizer
+from transformers import T5ForConditionalGeneration, T5Tokenizer
 import requests
 import os
 
@@ -76,7 +76,7 @@ def remove_duplicate_words(text):
     return " ".join(cleaned)
 
 # ------------------------
-# T5 Grammar Model
+# T5 Grammar Model (Grammar + Spelling)
 # ------------------------
 t5_repo = "prakhar146/grammar"
 cache_dir = "./.hf_cache"
@@ -90,7 +90,7 @@ grammar_tokenizer = T5Tokenizer.from_pretrained(
 grammar_model = T5ForConditionalGeneration.from_pretrained(
     t5_repo,
     cache_dir=cache_dir,
-    device_map=None
+    low_cpu_mem_usage=False
 )
 
 device = torch.device("cpu")
@@ -105,46 +105,27 @@ def correct_sentence(sentence, max_length=128):
     return grammar_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # ------------------------
-# Professional Tone Model
+# Professional Tone Model (Loaded cleanly from HF)
 # ------------------------
-tone_dir = "tone_model"
-os.makedirs(tone_dir, exist_ok=True)
+tone_model_name = "prakhar146/grammar"  # same repo, different task
 
-tone_files = {
-    "model.safetensors": "https://huggingface.co/prakhar146/grammar/resolve/main/model%20(1).safetensors",
-    "spiece.model": "https://huggingface.co/prakhar146/grammar/resolve/main/spiece%20(1).model",
-    "added_tokens.json": "https://huggingface.co/prakhar146/grammar/resolve/main/added_tokens%20(1).json",
-    "tokenizer_config.json": "https://huggingface.co/prakhar146/grammar/resolve/main/tokenizer_config%20(1).json",
-    "special_tokens_map.json": "https://huggingface.co/prakhar146/grammar/resolve/main/special_tokens_map%20(1).json",
-    "config.json": "https://huggingface.co/prakhar146/grammar/resolve/main/config%20(1).json",
-    "generation_config.json": "https://huggingface.co/prakhar146/grammar/resolve/main/generation_config%20(1).json"
-}
-
-# Download model files
-for name, url in tone_files.items():
-    path = os.path.join(tone_dir, name)
-    download_file(url, path)
-
-# ✅ Safe loading: Avoid meta tensor errors
-config = AutoConfig.from_pretrained(tone_dir)
-tone_tokenizer = AutoTokenizer.from_pretrained(tone_dir)
+tone_tokenizer = T5Tokenizer.from_pretrained(tone_model_name)
 tone_model = T5ForConditionalGeneration.from_pretrained(
-    tone_dir,
-    config=config,
-    low_cpu_mem_usage=True,  # important to prevent meta tensor creation
-    device_map=None
+    tone_model_name,
+    low_cpu_mem_usage=False
 )
-tone_model.eval()  # CPU by default
+tone_model.to(device)
+tone_model.eval()
 
 def to_professional(sentence, max_length=128):
     input_text = f"Professional: {sentence}"
-    inputs = tone_tokenizer(input_text, return_tensors="pt", truncation=True, padding=True)
+    inputs = tone_tokenizer(input_text, return_tensors="pt", truncation=True, padding=True).to(device)
     with torch.no_grad():
         outputs = tone_model.generate(**inputs, max_length=max_length)
     return tone_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # ------------------------
-# Full Pipeline
+# Full Pipeline: Spelling → Grammar → Professional Tone
 # ------------------------
 def full_pipeline(sentence):
     words = sentence.split()
