@@ -154,9 +154,9 @@ def full_pipeline(sentence):
 # ------------------------
 # Streamlit UI
 # ------------------------
-st.set_page_config(page_title="✨ Grammar & Professional Tone Corrector", page_icon="📝", layout="centered")
-st.title("📝 Grammar & Professional Tone Corrector")
-st.markdown("### ✨ Correct grammar and rewrite text in Professional tone!")
+st.set_page_config(page_title="✨GrammarlyPro", page_icon="📝", layout="centered")
+st.title("📝 Grammar,Spelling & Professional Tone Corrector")
+st.markdown("### ✨ Correct Your text!")
 
 if "corrected_text" not in st.session_state:
     st.session_state.corrected_text = ""
