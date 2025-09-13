@@ -2,7 +2,7 @@ import streamlit as st
 import json
 from difflib import get_close_matches
 import torch
-from transformers import T5ForConditionalGeneration, T5Tokenizer
+from transformers import T5ForConditionalGeneration, T5Tokenizer, AutoConfig, AutoTokenizer
 import requests
 import os
 
@@ -105,7 +105,7 @@ def correct_sentence(sentence, max_length=128):
     return grammar_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # ------------------------
-# Professional Tone Model (Hugging Face files)
+# Professional Tone Model
 # ------------------------
 tone_dir = "tone_model"
 os.makedirs(tone_dir, exist_ok=True)
@@ -125,21 +125,26 @@ for name, url in tone_files.items():
     path = os.path.join(tone_dir, name)
     download_file(url, path)
 
-# Load Professional-tone model directly on CPU
-tone_tokenizer = T5Tokenizer.from_pretrained(tone_dir)
-tone_model = T5ForConditionalGeneration.from_pretrained(tone_dir, device_map=None)
-tone_model.to(device)
-tone_model.eval()
+# ✅ Safe loading: Avoid meta tensor errors
+config = AutoConfig.from_pretrained(tone_dir)
+tone_tokenizer = AutoTokenizer.from_pretrained(tone_dir)
+tone_model = T5ForConditionalGeneration.from_pretrained(
+    tone_dir,
+    config=config,
+    low_cpu_mem_usage=True,  # important to prevent meta tensor creation
+    device_map=None
+)
+tone_model.eval()  # CPU by default
 
 def to_professional(sentence, max_length=128):
     input_text = f"Professional: {sentence}"
-    inputs = tone_tokenizer(input_text, return_tensors="pt", truncation=True, padding=True).to(device)
+    inputs = tone_tokenizer(input_text, return_tensors="pt", truncation=True, padding=True)
     with torch.no_grad():
         outputs = tone_model.generate(**inputs, max_length=max_length)
     return tone_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # ------------------------
-# Full Pipeline: Spelling → Grammar → Professional Tone
+# Full Pipeline
 # ------------------------
 def full_pipeline(sentence):
     words = sentence.split()
