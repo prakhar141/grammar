@@ -90,7 +90,6 @@ grammar_tokenizer = T5Tokenizer.from_pretrained(
 grammar_model = T5ForConditionalGeneration.from_pretrained(
     t5_repo,
     cache_dir=cache_dir,
-    low_cpu_mem_usage=False,
     device_map=None
 )
 
@@ -108,6 +107,9 @@ def correct_sentence(sentence, max_length=128):
 # ------------------------
 # Professional Tone Model (Hugging Face files)
 # ------------------------
+tone_dir = "tone_model"
+os.makedirs(tone_dir, exist_ok=True)
+
 tone_files = {
     "model.safetensors": "https://huggingface.co/prakhar146/grammar/resolve/main/model%20(1).safetensors",
     "spiece.model": "https://huggingface.co/prakhar146/grammar/resolve/main/spiece%20(1).model",
@@ -118,18 +120,14 @@ tone_files = {
     "generation_config.json": "https://huggingface.co/prakhar146/grammar/resolve/main/generation_config%20(1).json"
 }
 
-# Download tone model files if not exists
-os.makedirs("tone_model", exist_ok=True)
+# Download model files
 for name, url in tone_files.items():
-    path = os.path.join("tone_model", name)
-    if not os.path.exists(path):
-        r = requests.get(url)
-        with open(path, "wb") as f:
-            f.write(r.content)
+    path = os.path.join(tone_dir, name)
+    download_file(url, path)
 
-# Load Professional-tone model
-tone_tokenizer = T5Tokenizer.from_pretrained("tone_model")
-tone_model = T5ForConditionalGeneration.from_pretrained("tone_model", device_map=None)
+# Load Professional-tone model directly on CPU
+tone_tokenizer = T5Tokenizer.from_pretrained(tone_dir)
+tone_model = T5ForConditionalGeneration.from_pretrained(tone_dir, device_map=None)
 tone_model.to(device)
 tone_model.eval()
 
@@ -155,8 +153,8 @@ def full_pipeline(sentence):
 # Streamlit UI
 # ------------------------
 st.set_page_config(page_title="✨GrammarlyPro", page_icon="📝", layout="centered")
-st.title("📝 Grammar,Spelling & Professional Tone Corrector")
-st.markdown("### ✨ Correct Your text!")
+st.title("📝 Grammar, Spelling & Professional Tone Corrector")
+st.markdown("### ✨ Correct your text and rewrite it in Professional tone!")
 
 if "corrected_text" not in st.session_state:
     st.session_state.corrected_text = ""
